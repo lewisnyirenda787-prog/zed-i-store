@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#22c55e">
+    <title>ZED I STORE INVENTORY</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { margin: 0; padding: 0; background-color: #f3f4f6; color: #1f2937; padding-bottom: 70px; }
+        
+        /* Header */
+        header { background-color: #22c55e; color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        header h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+        header p { margin: 5px 0 0 0; font-size: 12px; opacity: 0.9; }
+
+        /* Screens */
+        .screen { display: none; padding: 15px; }
+        .screen.active { display: block; }
+
+        /* Cards */
+        .card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card h3 { margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; color: #374151; }
+        
+        /* Inputs */
+        label { display: block; font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 4px; margin-top: 8px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 15px; margin-bottom: 5px; }
+        input:focus { outline: none; border-color: #22c55e; }
+
+        /* Buttons */
+        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-green { background-color: #22c55e; color: white; }
+        .btn-green:active { background-color: #16a34a; }
+        .btn-red { background-color: #ef4444; color: white; }
+        .btn-blue { background-color: #3b82f6; color: white; }
+        .btn-gray { background-color: #6b7280; color: white; }
+        
+        /* Bottom Nav */
+        nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #e5e7eb; z-index: 100; }
+        nav button { flex: 1; background: none; color: #6b7280; padding: 10px 0; font-size: 11px; border-radius: 0; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        nav button.active { color: #22c55e; font-weight: bold; }
+        nav button span { font-size: 18px; margin-bottom: 2px; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+        th { background: #f9fafb; text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; color: #6b7280; font-size: 11px; text-transform: uppercase; }
+        td { padding: 8px; border-bottom: 1px solid #f3f4f6; }
+        .text-green { color: #22c55e; font-weight: bold; }
+        .text-red { color: #ef4444; font-weight: bold; }
+
+        /* Quick Add Chips */
+        .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .chip { background: #e5e7eb; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: #374151; cursor: pointer; }
+        .chip:active { background: #d1d5db; }
+
+        /* Summary Box */
+        .summary-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px; margin-top: 10px; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+        .summary-row.total { border-top: 2px solid #22c55e; margin-top: 10px; padding-top: 10px; font-weight: bold; font-size: 16px; color: #166534; }
+        
+        /* History Items */
+        .history-item { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #22c55e; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .history-item.loss { border-left-color: #ef4444; }
+        .history-item h4 { margin: 0 0 5px 0; font-size: 15px; }
+        .history-item p { margin: 0; font-size: 13px; color: #6b7280; }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <h1>ZED I STORE INVENTORY</h1>
+        <p>💰 Money Available: <span id="header-money">0</span> ZMW</p>
+    </header>
+
+    <!-- ==================== SCREEN: HOME ==================== -->
+    <div id="screen-home" class="screen active">
+        <div class="card">
+            <h3>📊 CURRENT STATUS</h3>
+            <div class="summary-box">
+                <div class="summary-row"><span>Total Money Available:</span> <span id="home-money" class="text-green">0 ZMW</span></div>
+                <div class="summary-row"><span>Available Stock Items:</span> <span id="home-stock">0</span></div>
+                <div class="summary-row"><span>Total Cycles Done:</span> <span id="home-cycles">0</span></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>🚀 START NEW CYCLE</h3>
+            <label>Starting Capital (Money Available)</label>
+            <input type="number" id="start-capital" placeholder="e.g. 24000">
+            <label>Date</label>
+            <input type="date" id="start-date">
+            <button class="btn-green" onclick="startNewCycle()">START CYCLE</button>
+        </div>
+
+        <div class="card">
+            <h3>📜 RECENT CYCLES</h3>
+            <div id="home-history-list">
+                <p style="text-align:center; color:#9ca3af; font-size:13px;">No cycles recorded yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SCREEN: ADD ITEMS ==================== -->
+    <div id="screen-add" class="screen">
+        <div class="card">
+            <h3>➕ ADD SALE / PURCHASE</h3>
+            
+            <p style="font-size:12px; color:#6b7280; margin:0 0 5px 0;">Quick Add:</p>
+            <div class="chips" id="quick-add-chips"></div>
+
+            <label>Item Name</label>
+            <input type="text" id="item-name" placeholder="e.g. iPhone 13">
+            
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Qty</label>
+                    <input type="number" id="item-qty" value="1">
+                </div>
+                <div style="flex:1;">
+                    <label>Cost Price (ZMW)</label>
+                    <input type="number" id="item-cost" placeholder="0">
+                </div>
+                <div style="flex:1;">
+                    <label>Selling Price (ZMW)</label>
+                    <input type="number" id="item-price" placeholder="0">
+                </div>
+            </div>
+
+            <label>Type</label>
+            <select id="item-type">
+                <option value="sale">SALE (Income)</option>
+                <option value="purchase">PURCHASE (Stock In)</option>
+                <option value="expense">EXPENSE</option>
+                <option value="draw">PERSONAL DRAW</option>
+            </select>
+
+            <button class="btn-blue" onclick="addItem()">ADD ITEM</button>
+        </div>
+
+        <div class="card">
+            <h3>📝 CURRENT CYCLE ITEMS</h3>
+            <table id="current-items-table">
+                <thead><tr><th>Item</th><th>Qty</th><th>Cost</th><th>Price</th><th>Type</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <p id="no-items-msg" style="text-align:center; color:#9ca3af; font-size:13px;">No items added yet.</p>
+            <button class="btn-green" onclick="finishCycle()">✅ FINISH & SAVE CYCLE</button>
+        </div>
+    </div>
+
+    <!-- ==================== SCREEN: HISTORY ==================== -->
+    <div id="screen-history" class="screen">
+        <div class="card">
+            <h3>📜 ALL PAST CYCLES</h3>
+            <div id="full-history-list"></div>
+        </div>
+    </div>
+
+    <!-- ==================== SCREEN: SUMMARY ==================== -->
+    <div id="screen-summary" class="screen">
+        <div class="card" id="summary-content"></div>
+        <button class="btn-gray" onclick="switchScreen('home')">⬅ Back to Home</button>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav>
+        <button onclick="switchScreen('home')" class="active" id="nav-home"><span>🏠</span>Home</button>
+        <button onclick="switchScreen('add')" id="nav-add"><span>➕</span>Add</button>
+        <button onclick="switchScreen('history')" id="nav-history"><span>📜</span>History</button>
+    </nav>
+
+<script>
+    // --- STATE ---
+    let state = {
+        cycles: [],
+        currentCycle: null,
+        moneyAvailable: 0,
+        availableStock: 0
+    };
+
+    // --- YOUR TOP ITEMS FOR QUICK ADD ---
+    const QUICK_ITEMS = [
+        "iPhone 13", "iPhone 11 Pro Max", "iPhone 11", "iPhone Xr", "iPhone X",
+        "Phone Cases", "Screen Protectors", "Charging Cables", "Power Banks",
+        "Phone Holders", "AirPods", "Earphones", "Bluetooth Speakers",
+        "Camera Protector", "Charger Heads", "Airforce 1", "Bags"
+    ];
+
+    // --- INIT ---
+    function init() {
+        const saved = localStorage.getItem('zedStoreData');
+        if (saved) {
+            state = JSON.parse(saved);
+        }
+        
+        // Setup date to today
+        document.getElementById('start-date').valueAsDate = new Date();
+        
+        // Build Quick Add chips
+        const chipsContainer = document.getElementById('quick-add-chips');
+        QUICK_ITEMS.forEach(item => {
+            const chip = document.createElement('div');
+            chip.className = 'chip';
+            chip.innerText = item;
+            chip.onclick = () => { document.getElementById('item-name').value = item; };
+            chipsContainer.appendChild(chip);
+        });
+
+        updateUI();
+    }
+
+    // --- SAVE ---
+    function save() {
+        localStorage.setItem('zedStoreData', JSON.stringify(state));
+    }
+
+    // --- NAVIGATION ---
+    function switchScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById('screen-' + screenId).classList.add('active');
+        document.getElementById('nav-' + screenId).classList.add('active');
+        
+        if(screenId === 'add') renderCurrentItems();
+        if(screenId === 'history') renderFullHistory();
+        if(screenId === 'home') updateUI();
+    }
+
+    // --- START CYCLE ---
+    function startNewCycle() {
+        const capital = parseFloat(document.getElementById('start-capital').value);
+        const date = document.getElementById('start-date').value;
+
+        if (!capital || capital <= 0) {
+            alert("Please enter a valid starting capital.");
+            return;
+        }
+
+        state.currentCycle = {
+            id: Date.now(),
+            date: date,
+            startCapital: capital,
+            items: [],
+            totalSales: 0,
+            totalCost: 0,
+            totalExpenses: 0,
+            totalDraws: 0,
+            grossProfit: 0,
+            netProfit: 0,
+            endCapital: capital
+        };
+        
+        state.moneyAvailable = capital;
+        save();
+        switchScreen('add');
+    }
+
+    // --- ADD ITEM ---
+    function addItem() {
+        if (!state.currentCycle) {
+            alert("Please start a new cycle first on the Home screen.");
+            return;
+        }
+
+        const name = document.getElementById('item-name').value.trim();
+        const qty = parseFloat(document.getElementById('item-qty').value);
+        const cost = parseFloat(document.getElementById('item-cost').value) || 0;
+        const price = parseFloat(document.getElementById('item-price').value) || 0;
+        const type = document.getElementById('item-type').value;
+
+        if (!name || !qty) {
+            alert("Please enter item name and quantity.");
+            return;
+        }
+
+        const item = {
+            id: Date.now(),
+            name: name,
+            qty: qty,
+            cost: cost,
+            price: price,
+            type: type
+        };
+
+        state.currentCycle.items.push(item);
+        
+        // Update math
+        updateCycleMath();
+        
+        // Clear inputs (keep qty=1)
+        document.getElementById('item-name').value = '';
+        document.getElementById('item-qty').value = '1';
+        document.getElementById('item-cost').value = '';
+        document.getElementById('item-price').value = '';
+        
+        save();
+        renderCurrentItems();
+    }
+
+    // --- CALCULATE MATH ---
+    function updateCycleMath() {
+        let sales = 0, costs = 0, expenses = 0, draws = 0;
+
+        state.currentCycle.items.forEach(item => {
+            if (item.type === 'sale') {
+                sales += (item.qty * item.price);
+                costs += (item.qty * item.cost);
+            } else if (item.type === 'purchase') {
+                costs += (item.qty * item.cost);
+            } else if (item.type === 'expense') {
+                expenses += (item.qty * item.cost);
+            } else if (item.type === 'draw') {
+                draws += (item.qty * item.cost);
+            }
+        });
+
+        state.currentCycle.totalSales = sales;
+        state.currentCycle.totalCost = costs;
+        state.currentCycle.totalExpenses = expenses;
+        state.currentCycle.totalDraws = draws;
+        state.currentCycle.grossProfit = sales - costs;
+        state.currentCycle.netProfit = state.currentCycle.grossProfit - expenses;
+        state.currentCycle.endCapital = state.currentCycle.startCapital + state.currentCycle.netProfit - draws;
+        
+        state.moneyAvailable = state.currentCycle.endCapital;
+    }
+
+    // --- RENDER CURRENT ITEMS ---
+    function renderCurrentItems() {
+        const tbody = document.querySelector('#current-items-table tbody');
+        const noItems = document.getElementById('no-items-msg');
+        tbody.innerHTML = '';
+
+        if (!state.currentCycle || state.currentCycle.items.length === 0) {
+            noItems.style.display = 'block';
+            document.getElementById('current-items-table').style.display = 'none';
+            return;
+        }
+
+        noItems.style.display = 'none';
+        document.getElementById('current-items-table').style.display = 'table';
+
+        state.currentCycle.items.forEach(item => {
+            const tr = document.createElement('tr');
+            let color = item.type === 'sale' ? 'text-green' : (item.type === 'purchase' ? 'text-red' : 'text-red');
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td>${item.qty}</td>
+                <td>${item.cost}</td>
+                <td>${item.price}</td>
+                <td class="${color}">${item.type.toUpperCase()}</td>
+                <td><button style="width:auto; padding:2px 8px; background:#ef4444; font-size:12px; margin:0;" onclick="removeItem(${item.id})">X</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function removeItem(id) {
+        state.currentCycle.items = state.currentCycle.items.filter(i => i.id !== id);
+        updateCycleMath();
+        save();
+        renderCurrentItems();
+    }
+
+    // --- FINISH CYCLE ---
+    function finishCycle() {
+        if (!state.currentCycle) return;
+        if (state.currentCycle.items.length === 0) {
+            alert("Add some items first before finishing the cycle.");
+            return;
+        }
+
+        // Add cycle to history
+        state.cycles.unshift(state.currentCycle);
+        
+        // Show summary
+        showSummary(state.currentCycle);
+        
+        // Reset current
+        state.currentCycle = null;
+        save();
+    }
+
+    // --- SUMMARY SCREEN ---
+    function showSummary(cycle) {
+        const profitClass = cycle.netProfit >= 0 ? 'text-green' : 'text-red';
+        const growth = cycle.endCapital - cycle.startCapital;
+        const growthClass = growth >= 0 ? 'text-green' : 'text-red';
+        
+        let itemsHtml = cycle.items.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${i.cost}</td><td>${i.price}</td><td>${i.type}</td></tr>`).join('');
+
+        document.getElementById('summary-content').innerHTML = `
+            <h3 style="text-align:center; color:#22c55e;">✅ CYCLE COMPLETE</h3>
+            <p style="text-align:center; font-size:12px; color:#6b7280;">Date: ${cycle.date}</p>
+            
+            <div class="summary-box">
+                <div class="summary-row"><span>Starting Capital:</span> <span>${cycle.startCapital} ZMW</span></div>
+                <div class="summary-row"><span>Total Sales:</span> <span>${cycle.totalSales} ZMW</span></div>
+                <div class="summary-row"><span>Total Cost:</span> <span>${cycle.totalCost} ZMW</span></div>
+                <div class="summary-row"><span>Gross Profit:</span> <span>${cycle.grossProfit} ZMW</span></div>
+                <div class="summary-row"><span>Expenses:</span> <span class="text-red">-${cycle.totalExpenses} ZMW</span></div>
+                <div class="summary-row"><span>Net Profit:</span> <span class="${profitClass}">${cycle.netProfit} ZMW</span></div>
+                <div class="summary-row"><span>Personal Draws:</span> <span class="text-red">-${cycle.totalDraws} ZMW</span></div>
+                <div class="summary-row total"><span>Money to Reinvest:</span> <span>${cycle.endCapital} ZMW</span></div>
+                <div class="summary-row" style="margin-top:10px;"><span>Growth:</span> <span class="${growthClass}">${growth >= 0 ? '📈 +' : '📉 '}${growth} ZMW</span></div>
+            </div>
+
+            <h3 style="margin-top:20px;">📦 Items in this Cycle</h3>
+            <table>
+                <thead><tr><th>Item</th><th>Qty</th><th>Cost</th><th>Price</th><th>Type</th></tr></thead>
+                <tbody>${itemsHtml}</tbody>
+            </table>
+        `;
+        
+        switchScreen('summary');
+    }
+
+    // --- UPDATE UI ---
+    function updateUI() {
+        document.getElementById('header-money').innerText = state.moneyAvailable.toLocaleString();
+        document.getElementById('home-money').innerText = state.moneyAvailable.toLocaleString() + ' ZMW';
+        document.getElementById('home-cycles').innerText = state.cycles.length;
+        
+        // Calculate total available stock (just a rough sum of items bought)
+        let stockCount = 0;
+        if(state.cycles.length > 0) {
+            // Just estimate from last cycle
+            stockCount = 0; 
+        }
+        document.getElementById('home-stock').innerText = "See History";
+
+        // Render history on home
+        const homeList = document.getElementById('home-history-list');
+        homeList.innerHTML = '';
+        if (state.cycles.length === 0) {
+            homeList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:13px;">No cycles recorded yet.</p>';
+        } else {
+            state.cycles.slice(0, 3).forEach(cycle => {
+                const profit = cycle.netProfit;
+                const profitClass = profit >= 0 ? 'text-green' : 'text-red';
+                homeList.innerHTML += `
+                    <div class="history-item ${profit < 0 ? 'loss' : ''}" onclick="showSummaryById(${cycle.id})">
+                        <h4>Cycle: ${cycle.date}</h4>
+                        <p>Net Profit: <span class="${profitClass}">${profit} ZMW</span> | End Capital: ${cycle.endCapital} ZMW</p>
+                    </div>
+                `;
+            });
+        }
+    }
+
+    // --- FULL HISTORY ---
+    function renderFullHistory() {
+        const list = document.getElementById('full-history-list');
+        list.innerHTML = '';
+        
+        if (state.cycles.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:13px;">No cycles recorded yet.</p>';
+            return;
+        }
+
+        state.cycles.forEach(cycle => {
+            const profit = cycle.netProfit;
+            const profitClass = profit >= 0 ? 'text-green' : 'text-red';
+            list.innerHTML += `
+                <div class="history-item ${profit < 0 ? 'loss' : ''}" onclick="showSummaryById(${cycle.id})">
+                    <h4>Cycle: ${cycle.date}</h4>
+                    <p>Start: ${cycle.startCapital} | Sales: ${cycle.totalSales} | Net: <span class="${profitClass}">${profit} ZMW</span></p>
+                    <p style="margin-top:5px; font-weight:bold;">💰 Reinvest: ${cycle.endCapital} ZMW</p>
+                </div>
+            `;
+        });
+    }
+
+    function showSummaryById(id) {
+        const cycle = state.cycles.find(c => c.id === id);
+        if(cycle) showSummary(cycle);
+    }
+
+    // --- START APP ---
+    init();
+</script>
+</body>
+</html>
