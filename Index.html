@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#22c55e">
+    <title>ZED I STORE INVENTORY</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { margin: 0; padding: 0; background-color: #f3f4f6; color: #1f2937; padding-bottom: 70px; }
+        header { background-color: #22c55e; color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        header h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+        header p { margin: 5px 0 0 0; font-size: 12px; opacity: 0.9; }
+        .screen { display: none; padding: 15px; }
+        .screen.active { display: block; }
+        .card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card h3 { margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; color: #374151; }
+        label { display: block; font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 4px; margin-top: 8px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 15px; margin-bottom: 5px; }
+        input:focus { outline: none; border-color: #22c55e; }
+        button { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-green { background-color: #22c55e; color: white; }
+        .btn-red { background-color: #ef4444; color: white; }
+        .btn-blue { background-color: #3b82f6; color: white; }
+        .btn-gray { background-color: #6b7280; color: white; }
+        .btn-orange { background-color: #f97316; color: white; }
+        nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #e5e7eb; z-index: 100; }
+        nav button { flex: 1; background: none; color: #6b7280; padding: 10px 0; font-size: 11px; border-radius: 0; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        nav button.active { color: #22c55e; font-weight: bold; }
+        nav button span { font-size: 18px; margin-bottom: 2px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+        th { background: #f9fafb; text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; color: #6b7280; font-size: 11px; text-transform: uppercase; }
+        td { padding: 8px; border-bottom: 1px solid #f3f4f6; }
+        .text-green { color: #22c55e; font-weight: bold; }
+        .text-red { color: #ef4444; font-weight: bold; }
+        .text-orange { color: #f97316; font-weight: bold; }
+        .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .chip { background: #e5e7eb; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: #374151; cursor: pointer; }
+        .chip:active { background: #d1d5db; }
+        .summary-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px; margin-top: 10px; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+        .summary-row.total { border-top: 2px solid #22c55e; margin-top: 10px; padding-top: 10px; font-weight: bold; font-size: 16px; color: #166534; }
+        .history-item { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #22c55e; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .history-item.loss { border-left-color: #ef4444; }
+        .history-item h4 { margin: 0 0 5px 0; font-size: 15px; }
+        .history-item p { margin: 0; font-size: 13px; color: #6b7280; }
+        .alert { padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; font-weight: bold; }
+        .alert-red { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+        .alert-orange { background: #ffedd5; color: #9a3412; border-left: 4px solid #f97316; }
+        .alert-green { background: #dcfce7; color: #166534; border-left: 4px solid #22c55e; }
+        .alert-blue { background: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
+        .stock-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+        .stock-fill { height: 100%; background: #22c55e; }
+        .stock-fill.low { background: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ZED I STORE INVENTORY</h1>
+        <p>💰 Money Available: <span id="header-money">0</span> ZMW</p>
+    </header>
+
+    <!-- HOME -->
+    <div id="screen-home" class="screen active">
+        <div class="card">
+            <h3>📊 BUSINESS DASHBOARD</h3>
+            <div class="summary-box">
+                <div class="summary-row"><span>Money Available:</span> <span id="home-money" class="text-green">0 ZMW</span></div>
+                <div class="summary-row"><span>Cycles Done:</span> <span id="home-cycles">0</span></div>
+                <div class="summary-row"><span>Total Profit Ever:</span> <span id="home-total-profit">0 ZMW</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🧠 SMART ADVICE</h3>
+            <div id="advice-box">
+                <p style="text-align:center; color:#9ca3af; font-size:13px;">Start a cycle to get advice.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🚨 STOCK ALERTS</h3>
+            <div id="stock-alerts">
+                <p style="text-align:center; color:#9ca3af; font-size:13px;">No stock info yet. Add purchases to track stock.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🚀 START NEW CYCLE</h3>
+            <label>Starting Capital</label>
+            <input type="number" id="start-capital" placeholder="e.g. 20750">
+            <label>Date</label>
+            <input type="date" id="start-date">
+            <button class="btn-green" onclick="startNewCycle()">START CYCLE</button>
+        </div>
+
+        <div class="card">
+            <h3>📜 RECENT CYCLES</h3>
+            <div id="home-history-list">
+                <p style="text-align:center; color:#9ca3af; font-size:13px;">No cycles yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD -->
+    <div id="screen-add" class="screen">
+        <div class="card">
+            <h3>➕ ADD ITEM</h3>
+            <p style="font-size:12px; color:#6b7280; margin:0 0 5px 0;">Quick Add:</p>
+            <div class="chips" id="quick-add-chips"></div>
+
+            <label>Item Name</label>
+            <input type="text" id="item-name" placeholder="e.g. iPhone 13">
+
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Qty</label>
+                    <input type="number" id="item-qty" value="1">
+                </div>
+                <div style="flex:1;">
+                    <label>Cost Price</label>
+                    <input type="number" id="item-cost" placeholder="0">
+                </div>
+                <div style="flex:1;">
+                    <label>Selling Price</label>
+                    <input type="number" id="item-price" placeholder="0">
+                </div>
+            </div>
+
+            <label>Type</label>
+            <select id="item-type">
+                <option value="sale">SALE (Money In)</option>
+                <option value="purchase">PURCHASE (Stock In)</option>
+                <option value="expense">EXPENSE</option>
+                <option value="draw">PERSONAL DRAW</option>
+            </select>
+
+            <button class="btn-blue" onclick="addItem()">ADD ITEM</button>
+        </div>
+
+        <div class="card">
+            <h3>📝 CURRENT CYCLE</h3>
+            <table id="current-items-table">
+                <thead><tr><th>Item</th><th>Qty</th><th>Cost</th><th>Price</th><th>Type</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <p id="no-items-msg" style="text-align:center; color:#9ca3af; font-size:13px;">No items added yet.</p>
+            <button class="btn-green" onclick="finishCycle()">✅ FINISH & SAVE CYCLE</button>
+        </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="screen-history" class="screen">
+        <div class="card">
+            <h3>📜 ALL PAST CYCLES</h3>
+            <div id="full-history-list"></div>
+        </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div id="screen-summary" class="screen">
+        <div id="summary-content"></div>
+        <button class="btn-gray" onclick="switchScreen('home')">⬅ Back to Home</button>
+    </div>
+
+    <!-- STOCK -->
+    <div id="screen-stock" class="screen">
+        <div class="card">
+            <h3>📦 CURRENT STOCK LEVELS</h3>
+            <div id="stock-list"></div>
+        </div>
+    </div>
+
+    <nav>
+        <button onclick="switchScreen('home')" class="active" id="nav-home"><span>🏠</span>Home</button>
+        <button onclick="switchScreen('add')" id="nav-add"><span>➕</span>Add</button>
+        <button onclick="switchScreen('stock')" id="nav-stock"><span>📦</span>Stock</button>
+        <button onclick="switchScreen('history')" id="nav-history"><span>📜</span>History</button>
+    </nav>
+
+<script>
+    let state = {
+        cycles: [],
+        currentCycle: null,
+        moneyAvailable: 0,
+        stock: {} // { itemName: qty }
+    };
+
+    const QUICK_ITEMS = [
+        "iPhone 13", "iPhone 11 Pro Max", "iPhone 11", "iPhone Xr", "iPhone X",
+        "Phone Cases", "Screen Protectors", "Charging Cables", "Power Banks",
+        "Phone Holders", "AirPods", "Earphones", "Bluetooth Speakers",
+        "Camera Protector", "Charger Heads", "Airforce 1", "Bags"
+    ];
+
+    function init() {
+        const saved = localStorage.getItem('zedStoreData');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            state = { ...state, ...parsed };
+            if (!state.stock) state.stock = {};
+        }
+        document.getElementById('start-date').valueAsDate = new Date();
+
+        const chipsContainer = document.getElementById('quick-add-chips');
+        QUICK_ITEMS.forEach(item => {
+            const chip = document.createElement('div');
+            chip.className = 'chip';
+            chip.innerText = item;
+            chip.onclick = () => { document.getElementById('item-name').value = item; };
+            chipsContainer.appendChild(chip);
+        });
+
+        updateUI();
+        updateStock();
+        generateAdvice();
+    }
+
+    function save() {
+        localStorage.setItem('zedStoreData', JSON.stringify(state));
+    }
+
+    function switchScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById('screen-' + screenId).classList.add('active');
+        document.getElementById('nav-' + screenId).classList.add('active');
+        if(screenId === 'add') renderCurrentItems();
+        if(screenId === 'history') renderFullHistory();
+        if(screenId === 'stock') updateStock();
+        if(screenId === 'home') { updateUI(); generateAdvice(); }
+    }
+
+    function startNewCycle() {
+        const capital = parseFloat(document.getElementById('start-capital').value);
+        const date = document.getElementById('start-date').value;
+        if (!capital || capital <= 0) { alert("Enter a valid starting capital."); return; }
+
+        state.currentCycle = {
+            id: Date.now(),
+            date: date,
+            startCapital: capital,
+            items: [],
+            totalSales: 0,
+            totalCost: 0,
+            totalExpenses: 0,
+            totalDraws: 0,
+            grossProfit: 0,
+            netProfit: 0,
+            endCapital: capital
+        };
+        state.moneyAvailable = capital;
+        save();
+        switchScreen('add');
+    }
+
+    function addItem() {
+        if (!state.currentCycle) { alert("Start a new cycle first."); return; }
+        const name = document.getElementById('item-name').value.trim();
+        const qty = parseFloat(document.getElementById('item-qty').value);
+        const cost = parseFloat(document.getElementById('item-cost').value) || 0;
+        const price = parseFloat(document.getElementById('item-price').value) || 0;
+        const type = document.getElementById('item-type').value;
+
+        if (!name || !qty) { alert("Enter item name and quantity."); return; }
+
+        const item = { id: Date.now(), name, qty, cost, price, type };
+        state.currentCycle.items.push(item);
+
+        // Update stock
+        if (type === 'purchase') {
+            state.stock[name] = (state.stock[name] || 0) + qty;
+        } else if (type === 'sale') {
+            state.stock[name] = (state.stock[name] || 0) - qty;
+            if (state.stock[name] < 0) state.stock[name] = 0;
+        }
+
+        updateCycleMath();
+        document.getElementById('item-name').value = '';
+        document.getElementById('item-qty').value = '1';
+        document.getElementById('item-cost').value = '';
+        document.getElementById('item-price').value = '';
+        save();
+        renderCurrentItems();
+        updateStock();
+    }
+
+    function updateCycleMath() {
+        let sales = 0, costs = 0, expenses = 0, draws = 0;
+        state.currentCycle.items.forEach(item => {
+            if (item.type === 'sale') {
+                sales += (item.qty * item.price);
+                costs += (item.qty * item.cost);
+            } else if (item.type === 'purchase') {
+                costs += (item.qty * item.cost);
+            } else if (item.type === 'expense') {
+                expenses += (item.qty * item.cost);
+            } else if (item.type === 'draw') {
+                draws += (item.qty * item.cost);
+            }
+        });
+        state.currentCycle.totalSales = sales;
+        state.currentCycle.totalCost = costs;
+        state.currentCycle.totalExpenses = expenses;
+        state.currentCycle.totalDraws = draws;
+        state.currentCycle.grossProfit = sales - costs;
+        state.currentCycle.netProfit = state.currentCycle.grossProfit - expenses;
+        state.currentCycle.endCapital = state.currentCycle.startCapital + state.currentCycle.netProfit - draws;
+        state.moneyAvailable = state.currentCycle.endCapital;
+    }
+
+    function renderCurrentItems() {
+        const tbody = document.querySelector('#current-items-table tbody');
+        const noItems = document.getElementById('no-items-msg');
+        tbody.innerHTML = '';
+        if (!state.currentCycle || state.currentCycle.items.length === 0) {
+            noItems.style.display = 'block';
+            document.getElementById('current-items-table').style.display = 'none';
+            return;
+        }
+        noItems.style.display = 'none';
+        document.getElementById('current-items-table').style.display = 'table';
+        state.currentCycle.items.forEach(item => {
+            const tr = document.createElement('tr');
+            let color = item.type === 'sale' ? 'text-green' : 'text-red';
+            tr.innerHTML = `
+                <td>${item.name}</td><td>${item.qty}</td><td>${item.cost}</td><td>${item.price}</td>
+                <td class="${color}">${item.type.toUpperCase()}</td>
+                <td><button style="width:auto; padding:2px 8px; background:#ef4444; font-size:12px; margin:0;" onclick="removeItem(${item.id})">X</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function removeItem(id) {
+        const item = state.currentCycle.items.find(i => i.id === id);
+        if (item) {
+            if (item.type === 'purchase') state.stock[item.name] -= item.qty;
+            if (item.type === 'sale') state.stock[item.name] = (state.stock[item.name] || 0) + item.qty;
+        }
+        state.currentCycle.items = state.currentCycle.items.filter(i => i.id !== id);
+        updateCycleMath();
+        save();
+        renderCurrentItems();
+        updateStock();
+    }
+
+    function finishCycle() {
+        if (!state.currentCycle) return;
+        if (state.currentCycle.items.length === 0) { alert("Add items first."); return; }
+        state.cycles.unshift(state.currentCycle);
+        showSummary(state.currentCycle);
+        state.currentCycle = null;
+        save();
+    }
+
+    function showSummary(cycle) {
+        const profitClass = cycle.netProfit >= 0 ? 'text-green' : 'text-red';
+        const growth = cycle.endCapital - cycle.startCapital;
+        const growthClass = growth >= 0 ? 'text-green' : 'text-red';
+        const expensePct = cycle.totalSales > 0 ? (cycle.totalExpenses / cycle.totalSales * 100).toFixed(1) : 0;
+
+        // Per-item profit analysis
+        let itemProfitMap = {};
+        cycle.items.forEach(i => {
+            if (i.type === 'sale') {
+                const p = (i.price - i.cost) * i.qty;
+                itemProfitMap[i.name] = (itemProfitMap[i.name] || 0) + p;
+            }
+        });
+        let itemAnalysis = Object.entries(itemProfitMap).map(([name, profit]) => {
+            const cls = profit >= 0 ? 'text-green' : 'text-red';
+            const sign = profit >= 0 ? '📈 +' : '📉 ';
+            return `<div class="summary-row"><span>${name}</span><span class="${cls}">${sign}${profit} ZMW</span></div>`;
+        }).join('');
+
+        let advice = [];
+        // Check for losses
+        Object.entries(itemProfitMap).forEach(([name, profit]) => {
+            if (profit < 0) advice.push(`<div class="alert alert-red">⚠️ You LOST ${Math.abs(profit)} ZMW on ${name}. Raise price or stop selling!</div>`);
+        });
+        // Expense warning
+        if (expensePct > 20) advice.push(`<div class="alert alert-orange">💸 Expenses were ${expensePct}% of sales. Try to keep under 15%!</div>`);
+        else if (expensePct > 0) advice.push(`<div class="alert alert-green">✅ Expenses under control (${expensePct}%). Good job!</div>`);
+        // Profit advice
+        if (cycle.netProfit > 0) advice.push(`<div class="alert alert-green">💰 You made a net profit of ${cycle.netProfit} ZMW. Keep it up!</div>`);
+        else if (cycle.netProfit < 0) advice.push(`<div class="alert alert-red">🔻 You made a net LOSS of ${Math.abs(cycle.netProfit)} ZMW. Review expenses and prices.</div>`);
+
+        document.getElementById('summary-content').innerHTML = `
+            <div class="card">
+                <h3 style="text-align:center; color:#22c55e;">✅ CYCLE COMPLETE</h3>
+                <p style="text-align:center; font-size:12px; color:#6b7280;">Date: ${cycle.date}</p>
+                <div class="summary-box">
+                    <div class="summary-row"><span>Starting Capital:</span><span>${cycle.startCapital} ZMW</span></div>
+                    <div class="summary-row"><span>Total Sales:</span><span>${cycle.totalSales} ZMW</span></div>
+                    <div class="summary-row"><span>Gross Profit:</span><span>${cycle.grossProfit} ZMW</span></div>
+                    <div class="summary-row"><span>Expenses:</span><span class="text-red">-${cycle.totalExpenses} ZMW</span></div>
+                    <div class="summary-row"><span>Net Profit:</span><span class="${profitClass}">${cycle.netProfit} ZMW</span></div>
+                    <div class="summary-row"><span>Personal Draws:</span><span class="text-red">-${cycle.totalDraws} ZMW</span></div>
+                    <div class="summary-row total"><span>Reinvest:</span><span>${cycle.endCapital} ZMW</span></div>
+                    <div class="summary-row" style="margin-top:10px;"><span>Growth:</span><span class="${growthClass}">${growth >= 0 ? '📈 +' : '📉 '}${growth} ZMW</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🧠 SMART ADVICE</h3>
+                ${advice.join('')}
+            </div>
+
+            <div class="card">
+                <h3>💰 PROFIT PER ITEM</h3>
+                ${itemAnalysis || '<p style="font-size:13px; color:#9ca3af;">No sales in this cycle.</p>'}
+            </div>
+        `;
+        switchScreen('summary');
+    }
+
+    function updateUI() {
+        document.getElementById('header-money').innerText = state.moneyAvailable.toLocaleString();
+        document.getElementById('home-money').innerText = state.moneyAvailable.toLocaleString() + ' ZMW';
+        document.getElementById('home-cycles').innerText = state.cycles.length;
+        let totalProfit = state.cycles.reduce((sum, c) => sum + c.netProfit, 0);
+        const tpEl = document.getElementById('home-total-profit');
+        tpEl.innerText = totalProfit + ' ZMW';
+        tpEl.className = totalProfit >= 0 ? 'text-green' : 'text-red';
+
+        const homeList = document.getElementById('home-history-list');
+        homeList.innerHTML = '';
+        if (state.cycles.length === 0) {
+            homeList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:13px;">No cycles yet.</p>';
+        } else {
+            state.cycles.slice(0, 3).forEach(cycle => {
+                const cls = cycle.netProfit >= 0 ? 'text-green' : 'text-red';
+                homeList.innerHTML += `
+                    <div class="history-item ${cycle.netProfit < 0 ? 'loss' : ''}" onclick="showSummaryById(${cycle.id})">
+                        <h4>${cycle.date}</h4>
+                        <p>Net: <span class="${cls}">${cycle.netProfit} ZMW</span> | Reinvest: ${cycle.endCapital}</p>
+                    </div>`;
+            });
+        }
+    }
+
+    function updateStock() {
+        const list = document.getElementById('stock-list');
+        const alerts = document.getElementById('stock-alerts');
+        if (!list) return;
+
+        const entries = Object.entries(state.stock).filter(([k, v]) => v >= 0);
+        if (entries.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:13px;">No stock tracked yet. Add a PURCHASE to start.</p>';
+            alerts.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:13px;">No stock info yet.</p>';
+            return;
+        }
+
+        // Build stock list
+        let html = '';
+        let alertHtml = '';
+        entries.forEach(([name, qty]) => {
+            const isLow = qty <= 1;
+            const pct = Math.min(100, (qty / 10) * 100);
+            html += `
+                <div style="margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; font-size:14px;">
+                        <strong>${name}</strong>
+                        <span class="${isLow ? 'text-red' : 'text-green'}">${qty} left</span>
+                    </div>
+                    <div class="stock-bar"><div class="stock-fill ${isLow ? 'low' : ''}" style="width:${pct}%"></div></div>
+                </div>`;
+            if (isLow) {
+                alertHtml += `<div class="alert alert-red">🚨 ORDER NOW: ${name} — only ${qty} left. Order 4 more!</div>`;
+            }
+        });
+        list.innerHTML = html;
+        alerts.innerHTML = alertHtml || '<div class="alert alert-green">✅ All items in stock. No orders needed.</div>';
+    }
+
+    function renderFullHistory() {
+        const list = document.getElementById('full-history-list');
+        list.innerHTML = '';
+        if (state.cycles.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:13px;">No cycles yet.</p>';
+            return;
+        }
+        state.cycles.forEach(cycle => {
+            const cls = cycle.netProfit >= 0 ? 'text-green' : 'text-red';
+            list.innerHTML += `
+                <div class="history-item ${cycle.netProfit < 0 ? 'loss' : ''}" onclick="showSummaryById(${cycle.id})">
+                    <h4>${cycle.date}</h4>
+                    <p>Start: ${cycle.startCapital} | Sales: ${cycle.totalSales} | Net: <span class="${cls}">${cycle.netProfit}</span></p>
+                    <p style="margin-top:5px; font-weight:bold;">💰 Reinvest: ${cycle.endCapital} ZMW</p>
+                </div>`;
+        });
+    }
+
+    function showSummaryById(id) {
+        const cycle = state.cycles.find(c => c.id === id);
+        if (cycle) showSummary(cycle);
+    }
+
+    function generateAdvice() {
+        const box = document.getElementById('advice-box');
+        if (!box) return;
+        let advice = [];
+
+        if (state.cycles.length === 0) {
+            box.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:13px;">Complete your first cycle to get smart advice.</p>';
+            return;
+        }
+
+        const last = state.cycles[0];
+        const prev = state.cycles[1];
+
+        // Stock warnings
+        const lowItems = Object.entries(state.stock).filter(([k, v]) => v <= 1 && v >= 0);
+        lowItems.forEach(([name]) => {
+            advice.push(`<div class="alert alert-red">🚨 ORDER NOW: ${name} is low (${state.stock[name]} left)</div>`);
+        });
+
+        // Loss warning
+        if (last.netProfit < 0) {
+            advice.push(`<div class="alert alert-red">🔻 Last cycle LOSS: ${last.netProfit} ZMW. Check expenses.</div>`);
+        } else {
+            advice.push(`<div class="alert alert-green">📈 Last cycle profit: +${last.netProfit} ZMW</div>`);
+        }
+
+        // Expense warning
+        const expPct = last.totalSales > 0 ? (last.totalExpenses / last.totalSales * 100).toFixed(0) : 0;
+        if (expPct > 20) {
+            advice.push(`<div class="alert alert-orange">💸 Expenses = ${expPct}% of sales. Try to reduce!</div>`);
+        }
+
+        // Comparison
+        if (prev) {
+            const diff = last.netProfit - prev.netProfit;
+            if (diff > 0) advice.push(`<div class="alert alert-green">📊 Better than last cycle by +${diff} ZMW</div>`);
+            else if (diff < 0) advice.push(`<div class="alert alert-orange">📉 Down by ${Math.abs(diff)} ZMW vs last cycle</div>`);
+        }
+
+        box.innerHTML = advice.join('') || '<div class="alert alert-blue">Keep tracking to get advice.</div>';
+    }
+
+    init();
+</script>
+</body>
+</html>
