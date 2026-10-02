@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#22c55e">
+    <title>ZED-I-STORE</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { margin: 0; padding: 0; background-color: #f3f4f6; color: #1f2937; padding-bottom: 20px; }
+
+        /* HEADER */
+        header { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 12px 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; }
+        .header-name { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+        .header-name span { font-size: 11px; opacity: 0.9; display: block; font-weight: normal; }
+        .header-money { text-align: right; font-size: 12px; }
+        .header-money strong { font-size: 15px; display: block; }
+        .header-today { background: rgba(255,255,255,0.2); border-radius: 6px; padding: 4px 10px; margin-top: 8px; font-size: 12px; text-align: center; }
+        .header-today strong { font-size: 14px; }
+
+        /* SPREADSHEET */
+        .sheet-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 170px); -webkit-overflow-scrolling: touch; }
+        table { border-collapse: collapse; font-size: 11px; min-width: 100%; background: white; }
+        th { background: #22c55e; color: white; padding: 8px 4px; font-size: 10px; text-align: center; position: sticky; top: 0; z-index: 5; border: 1px solid #16a34a; white-space: nowrap; }
+        td { padding: 0; border: 1px solid #e5e7eb; text-align: center; }
+        td input { width: 100%; padding: 8px 4px; border: none; text-align: center; font-size: 11px; background: transparent; }
+        td input:focus { outline: 2px solid #22c55e; background: #f0fdf4; }
+        td.calc { padding: 8px 4px; font-weight: bold; font-size: 11px; }
+        .green { background: #dcfce7; }
+        .red { background: #fee2e2; }
+        .yellow { background: #fef3c7; }
+        .text-green { color: #16a34a; }
+        .text-red { color: #dc2626; }
+        .text-orange { color: #ea580c; }
+        tr.out-of-stock td { background: #fee2e2; }
+        tr.low-stock td { background: #fef3c7; }
+        .total-row { background: #f3f4f6; font-weight: bold; }
+        .total-row td { padding: 10px 4px; font-size: 11px; }
+        .delete-btn { background: #ef4444; color: white; border: none; padding: 6px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; width: 100%; }
+
+        /* ACTION BUTTONS */
+        .actions { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px; display: flex; gap: 8px; box-shadow: 0 -2px 6px rgba(0,0,0,0.1); z-index: 100; }
+        .actions button { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .btn-green { background: #22c55e; color: white; }
+        .btn-blue { background: #3b82f6; color: white; }
+        .btn-orange { background: #f97316; color: white; }
+
+        /* DASHBOARD */
+        .dashboard { background: white; margin: 10px; border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .dash-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #f3f4f6; }
+        .dash-row:last-child { border-bottom: none; }
+        .dash-row strong { font-size: 14px; }
+
+        /* MODAL */
+        .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+        .modal-bg.active { display: flex; }
+        .modal { background: white; border-radius: 12px; padding: 20px; width: 100%; max-width: 380px; }
+        .modal h3 { margin: 0 0 12px 0; font-size: 16px; }
+        .modal label { display: block; font-size: 12px; font-weight: bold; color: #4b5563; margin-top: 10px; margin-bottom: 4px; }
+        .modal input, .modal select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .modal-actions { display: flex; gap: 8px; margin-top: 15px; }
+        .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; }
+        .chip-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .chip { background: #e5e7eb; padding: 5px 10px; border-radius: 15px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .chip:active { background: #d1d5db; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-top">
+            <div class="header-name">
+                LEWISFREXSON
+                <span>ZED-I-STORE</span>
+            </div>
+            <div class="header-money">
+                TOTAL
+                <strong id="header-total">0 ZMW</strong>
+            </div>
+        </div>
+        <div class="header-today">
+            📅 Today (<span id="header-date"></span>): <strong id="header-today">+0 ZMW</strong> added
+        </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <div class="dashboard">
+        <div class="dash-row"><span>💰 Money Available:</span><strong class="text-green" id="dash-money">0 ZMW</strong></div>
+        <div class="dash-row"><span>📈 Total Profit:</span><strong class="text-green" id="dash-profit">0 ZMW</strong></div>
+        <div class="dash-row"><span>💸 Total Expenses:</span><strong class="text-red" id="dash-expenses">0 ZMW</strong></div>
+        <div class="dash-row"><span>📦 Items Tracked:</span><strong id="dash-items">0</strong></div>
+    </div>
+
+    <!-- SPREADSHEET -->
+    <div class="sheet-wrap">
+        <table id="sheet">
+            <thead>
+                <tr>
+                    <th style="min-width:90px;">ITEMS</th>
+                    <th style="min-width:45px;">QTY</th>
+                    <th style="min-width:45px;">SOLD</th>
+                    <th style="min-width:60px;">PRICE<br>QTY</th>
+                    <th style="min-width:60px;">SELLING<br>PRICE</th>
+                    <th style="min-width:60px;">COST<br>PRICE</th>
+                    <th style="min-width:60px;">PROFIT</th>
+                    <th style="min-width:60px;">EXPENSES</th>
+                    <th style="min-width:65px;">GROSS<br>PROFIT</th>
+                    <th style="min-width:70px;">MONEY<br>AVAIL.</th>
+                    <th style="min-width:65px;">AVAIL.<br>STOCK</th>
+                    <th style="min-width:40px;">✕</th>
+                </tr>
+            </thead>
+            <tbody id="sheet-body"></tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td>TOTAL</td>
+                    <td id="t-qty">0</td>
+                    <td id="t-sold">0</td>
+                    <td id="t-priceqty">0</td>
+                    <td id="t-selling">0</td>
+                    <td id="t-cost">0</td>
+                    <td id="t-profit">0</td>
+                    <td id="t-exp">0</td>
+                    <td id="t-gross">0</td>
+                    <td id="t-money">0</td>
+                    <td id="t-stock">0</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="actions">
+        <button class="btn-green" onclick="openAddModal()">➕ Add Item</button>
+        <button class="btn-blue" onclick="saveData()">💾 Save</button>
+        <button class="btn-orange" onclick="resetAll()">🔄 Reset</button>
+    </div>
+
+    <!-- ADD ITEM MODAL -->
+    <div class="modal-bg" id="add-modal">
+        <div class="modal">
+            <h3>➕ Add Item</h3>
+            <label>Item Name</label>
+            <input type="text" id="m-name" placeholder="e.g. iPhone 13">
+            <div class="chip-row" id="m-chips"></div>
+
+            <label>Qty (Stock In)</label>
+            <input type="number" id="m-qty" value="1">
+
+            <label>Sold</label>
+            <input type="number" id="m-sold" value="0">
+
+            <label>Cost Price (per unit)</label>
+            <input type="number" id="m-cost" placeholder="0">
+
+            <label>Selling Price (per unit)</label>
+            <input type="number" id="m-price" placeholder="0">
+
+            <label>Expenses (for this item)</label>
+            <input type="number" id="m-exp" value="0">
+
+            <div class="modal-actions">
+                <button class="btn-green" onclick="addItem()">ADD</button>
+                <button style="background:#e5e7eb; color:#374151;" onclick="closeModal()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const QUICK_ITEMS = [
+        "iPhone 13", "iPhone 11 Pro Max", "iPhone 11", "iPhone Xr", "iPhone X",
+        "Phone Cases", "Screen Protectors", "Charging Cables", "Power Banks",
+        "Phone Holders", "AirPods", "Earphones", "Bluetooth Speakers",
+        "Camera Protector", "Charger Heads", "Airforce 1", "Bags"
+    ];
+
+    let items = [];
+    let startingMoney = 0;
+    let todayStart = 0;
+    let todayDate = "";
+
+    // ===== LOAD =====
+    function loadData() {
+        const saved = localStorage.getItem('zedStoreSpreadsheet');
+        if (saved) {
+            const data = JSON.parse(saved);
+            items = data.items || [];
+            startingMoney = data.startingMoney || 0;
+            todayStart = data.todayStart || 0;
+            todayDate = data.todayDate || getToday();
+        } else {
+            todayDate = getToday();
+        }
+    }
+
+    function getToday() {
+        const d = new Date();
+        return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate();
+    }
+
+    // ===== SAVE =====
+    function saveData() {
+        localStorage.setItem('zedStoreSpreadsheet', JSON.stringify({
+            items, startingMoney, todayStart, todayDate
+        }));
+        alert("✅ Saved! Your data is safe.");
+    }
+
+    // ===== ADD ITEM MODAL =====
+    function openAddModal() {
+        document.getElementById('add-modal').classList.add('active');
+        // Build chips
+        const chipsDiv = document.getElementById('m-chips');
+        chipsDiv.innerHTML = '';
+        QUICK_ITEMS.forEach(it => {
+            const c = document.createElement('div');
+            c.className = 'chip';
+            c.innerText = it;
+            c.onclick = () => { document.getElementById('m-name').value = it; };
+            chipsDiv.appendChild(c);
+        });
+        // Clear inputs
+        document.getElementById('m-name').value = '';
+        document.getElementById('m-qty').value = '1';
+        document.getElementById('m-sold').value = '0';
+        document.getElementById('m-cost').value = '';
+        document.getElementById('m-price').value = '';
+        document.getElementById('m-exp').value = '0';
+    }
+
+    function closeModal() {
+        document.getElementById('add-modal').classList.remove('active');
+    }
+
+    function addItem() {
+        const name = document.getElementById('m-name').value.trim();
+        const qty = parseFloat(document.getElementById('m-qty').value) || 0;
+        const sold = parseFloat(document.getElementById('m-sold').value) || 0;
+        const cost = parseFloat(document.getElementById('m-cost').value) || 0;
+        const price = parseFloat(document.getElementById('m-price').value) || 0;
+        const exp = parseFloat(document.getElementById('m-exp').value) || 0;
+
+        if (!name) { alert("Enter item name"); return; }
+
+        items.push({
+            id: Date.now(),
+            name, qty, sold, cost, price, exp
+        });
+
+        closeModal();
+        renderSheet();
+        saveData();
+    }
+
+    // ===== DELETE =====
+    function deleteItem(id) {
+        if (!confirm("Delete this row?")) return;
+        items = items.filter(i => i.id !== id);
+        renderSheet();
+        saveData();
+    }
+
+    // ===== EDIT (on blur) =====
+    function updateField(id, field, value) {
+        const item = items.find(i => i.id === id);
+        if (!item) return;
+        item[field] = parseFloat(value) || 0;
+        renderSheet();
+        saveData();
+    }
+
+    // ===== CALCULATE ONE ITEM =====
+    function calcItem(item) {
+        const priceQty = item.price * item.sold;
+        const profit = (item.price - item.cost) * item.sold;
+        const grossProfit = profit - item.exp;
+        const availStock = item.qty - item.sold;
+        const moneyAvail = grossProfit; // per item contribution
+        return { priceQty, profit, grossProfit, availStock, moneyAvail };
+    }
+
+    // ===== RENDER SHEET =====
+    function renderSheet() {
+        const tbody = document.getElementById('sheet-body');
+        tbody.innerHTML = '';
+
+        let totals = {
+            qty: 0, sold: 0, priceQty: 0, selling: 0, cost: 0,
+            profit: 0, exp: 0, gross: 0, money: 0, stock: 0
+        };
+
+        items.forEach(item => {
+            const c = calcItem(item);
+            const tr = document.createElement('tr');
+
+            // Color coding for stock
+            if (c.availStock <= 0) tr.className = 'out-of-stock';
+            else if (c.availStock <= 1) tr.className = 'low-stock';
+
+            tr.innerHTML = `
+                <td><input type="text" value="${item.name}" onchange="updateFieldText(${item.id}, 'name', this.value)"></td>
+                <td><input type="number" value="${item.qty}" onchange="updateField(${item.id}, 'qty', this.value)"></td>
+                <td><input type="number" value="${item.sold}" onchange="updateField(${item.id}, 'sold', this.value)"></td>
+                <td class="calc">${c.priceQty.toFixed(0)}</td>
+                <td><input type="number" value="${item.price}" onchange="updateField(${item.id}, 'price', this.value)"></td>
+                <td><input type="number" value="${item.cost}" onchange="updateField(${item.id}, 'cost', this.value)"></td>
+                <td class="calc ${c.profit >= 0 ? 'text-green' : 'text-red'}">${c.profit.toFixed(0)}</td>
+                <td><input type="number" value="${item.exp}" onchange="updateField(${item.id}, 'exp', this.value)"></td>
+                <td class="calc ${c.grossProfit >= 0 ? 'text-green' : 'text-red'}">${c.grossProfit.toFixed(0)}</td>
+                <td class="calc ${c.moneyAvail >= 0 ? 'text-green' : 'text-red'}">${c.moneyAvail.toFixed(0)}</td>
+                <td class="calc ${c.availStock <= 0 ? 'text-red' : (c.availStock <= 1 ? 'text-orange' : 'text-green')}">${c.availStock}</td>
+                <td><button class="delete-btn" onclick="deleteItem(${item.id})">✕</button></td>
+            `;
+            tbody.appendChild(tr);
+
+            // Sum totals
+            totals.qty += item.qty;
+            totals.sold += item.sold;
+            totals.priceQty += c.priceQty;
+            totals.selling += item.price * item.sold;
+            totals.cost += item.cost * item.sold;
+            totals.profit += c.profit;
+            totals.exp += item.exp;
+            totals.gross += c.grossProfit;
+            totals.money += c.moneyAvail;
+            totals.stock += c.availStock;
+        });
+
+        document.getElementById('t-qty').innerText = totals.qty;
+        document.getElementById('t-sold').innerText = totals.sold;
+        document.getElementById('t-priceqty').innerText = totals.priceQty.toFixed(0);
+        document.getElementById('t-selling').innerText = totals.selling.toFixed(0);
+        document.getElementById('t-cost').innerText = totals.cost.toFixed(0);
+        document.getElementById('t-profit').innerText = totals.profit.toFixed(0);
+        document.getElementById('t-exp').innerText = totals.exp.toFixed(0);
+        document.getElementById('t-gross').innerText = totals.gross.toFixed(0);
+        document.getElementById('t-money').innerText = totals.money.toFixed(0);
+        document.getElementById('t-stock').innerText = totals.stock;
+
+        // Update dashboard
+        const moneyAvailable = startingMoney + totals.gross;
+        document.getElementById('dash-money').innerText = moneyAvailable.toFixed(0) + ' ZMW';
+        document.getElementById('dash-profit').innerText = totals.profit.toFixed(0) + ' ZMW';
+        document.getElementById('dash-expenses').innerText = totals.exp.toFixed(0) + ' ZMW';
+        document.getElementById('dash-items').innerText = items.length;
+
+        // Header total
+        document.getElementById('header-total').innerText = moneyAvailable.toFixed(0) + ' ZMW';
+
+        // Today's earnings
+        const todayEarnings = totals.gross - todayStart;
+        document.getElementById('header-today').innerText = (todayEarnings >= 0 ? '+' : '') + todayEarnings.toFixed(0) + ' ZMW';
+        document.getElementById('header-date').innerText = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    }
+
+    function updateFieldText(id, field, value) {
+        const item = items.find(i => i.id === id);
+        if (item) {
+            item[field] = value;
+            saveData();
+        }
+    }
+
+    // ===== RESET =====
+    function resetAll() {
+        if (!confirm("⚠️ This will DELETE all your data. Are you sure?")) return;
+        if (!confirm("Really sure? This cannot be undone.")) return;
+        localStorage.removeItem('zedStoreSpreadsheet');
+        items = [];
+        startingMoney = 0;
+        todayStart = 0;
+        renderSheet();
+        alert("✅ Reset complete. Fresh start.");
+    }
+
+    // ===== START =====
+    loadData();
+    renderSheet();
+
+    // Check for new day
+    const currentDay = getToday();
+    if (todayDate !== currentDay) {
+        todayDate = currentDay;
+        todayStart = 0;
+        saveData();
+    }
+</script>
+</body>
+</html>
