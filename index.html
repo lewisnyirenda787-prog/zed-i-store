@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#22c55e">
     <title>ZED-I-STORE</title>
+    
+    <!-- PWA & Apple Add to Home Screen Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ZED Store">
+
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { margin: 0; padding: 0; background-color: #f3f4f6; color: #1f2937; padding-bottom: 20px; }
@@ -385,6 +392,15 @@
         todayDate = currentDay;
         todayStart = 0;
         saveData();
+    }
+
+    // ===== REGISTER SERVICE WORKER (For PWA) =====
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => console.log('ServiceWorker registered:', registration.scope))
+                .catch(error => console.log('ServiceWorker registration failed:', error));
+        });
     }
 </script>
 </body>
